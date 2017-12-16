@@ -1,0 +1,103 @@
+FROM nvidia/cuda:8.0-cudnn7-runtime-ubuntu16.04
+MAINTAINER Bill Xue <xueeinstein@gmail.com>
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# built-in packages
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends software-properties-common curl \
+    && sh -c "echo 'deb http://download.opensuse.org/repositories/home:/Horst3180/xUbuntu_16.04/ /' >> /etc/apt/sources.list.d/arc-theme.list" \
+    && curl -SL http://download.opensuse.org/repositories/home:Horst3180/xUbuntu_16.04/Release.key | apt-key add - \
+    && add-apt-repository ppa:fcwu-tw/ppa \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends --allow-unauthenticated \
+        supervisor \
+        openssh-server pwgen sudo vim-tiny \
+        net-tools \
+        lxde x11vnc xvfb \
+        gtk2-engines-murrine ttf-ubuntu-font-family \
+        firefox htop nginx \
+        fonts-wqy-microhei \
+        language-pack-zh-hant language-pack-gnome-zh-hant firefox-locale-zh-hant \
+        python-pip python-dev build-essential \
+        mesa-utils libgl1-mesa-dri \
+        gnome-themes-standard gtk2-engines-pixbuf gtk2-engines-murrine pinta arc-theme \
+        dbus-x11 x11-utils \
+    && apt-get autoclean \
+    && apt-get autoremove \
+    && rm -rf /var/lib/apt/lists/*
+
+# tini for subreap
+ENV TINI_VERSION v0.9.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /bin/tini
+RUN chmod +x /bin/tini
+
+# install deps for web VNC
+ADD image /
+RUN pip install setuptools wheel && pip install -r /usr/lib/web/requirements.txt
+
+# install Anaconda
+# https://github.com/ContinuumIO/docker-images/blob/master/anaconda/Dockerfile
+WORKDIR /
+RUN apt-get update --fix-missing && apt-get install -y wget bzip2 ca-certificates \
+    libglib2.0-0 libxext6 libsm6 libxrender1 \
+    git mercurial subversion
+RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
+    wget  --no-check-certificate --quiet https://repo.continuum.io/archive/Anaconda2-2.5.0-Linux-x86_64.sh && \
+    /bin/bash /Anaconda2-2.5.0-Linux-x86_64.sh -b -p /opt/conda && \
+    rm /Anaconda2-2.5.0-Linux-x86_64.sh
+
+RUN apt-get install -y curl grep sed dpkg && \
+    TINI_VERSION=`curl https://github.com/krallin/tini/releases/latest | grep -o "/v.*\"" | sed 's:^..\(.*\).$:\1:'` && \
+    curl -L "https://github.com/krallin/tini/releases/download/v${TINI_VERSION}/tini_${TINI_VERSION}.deb" > tini.deb && \
+    dpkg -i tini.deb && \
+    rm tini.deb && \
+    apt-get clean
+
+ENV PATH /opt/conda/bin:$PATH
+# http://bugs.python.org/issue19846
+# > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK.
+ENV LANG C.UTF-8
+ENTRYPOINT [ "/usr/bin/tini", "--" ]
+
+# special deps
+RUN apt-get -y install git make cmake unzip
+RUN pip install awscli
+# ALE requires zlib
+RUN apt-get -y install zlib1g-dev
+# MUJOCO requires graphics stuff (Why?)
+RUN apt-get -y build-dep glfw
+RUN apt-get -y install libxrandr2 libxinerama-dev libxi6 libxcursor-dev
+# copied from requirements.txt
+#RUN pip install imageio tabulate nose
+RUN apt-get install -y vim ack-grep
+RUN pip install --upgrade pip
+# usual pip install pygame will fail
+RUN apt-get build-dep -y python-pygame
+RUN pip install Pillow
+
+# OpenAI gym
+RUN apt-get -y install libgtk2.0-0 ffmpeg libav-tools
+RUN pip install gym
+CMD alias ffmpeg="avconv"
+
+# Add codebase stub
+RUN mkdir /root/code && git clone https://github.com/rll/rllab.git /root/code/rllab && \
+    conda env create -f /root/code/rllab/environment.yml
+
+ENV PYTHONPATH /root/code/rllab:$PYTHONPATH
+ENV PATH /opt/conda/envs/rllab3/bin:$PATH
+RUN echo "source activate rllab3" >> /root/.bashrc
+ENV BASH_ENV /root/.bashrc
+WORKDIR /root/code
+
+# Jupyter Notebook
+EXPOSE 8888
+# TensorBoard
+EXPOSE 6006
+# Web VNC
+EXPOSE 80
+
+ENV HOME=/home/ubuntu \
+    SHELL=/bin/bash
+ENTRYPOINT ["/startup.sh"]
