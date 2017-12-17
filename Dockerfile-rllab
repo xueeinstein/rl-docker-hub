@@ -73,6 +73,7 @@ CMD alias ffmpeg="avconv"
 # Add codebase stub
 RUN mkdir /root/code && git clone https://github.com/rll/rllab.git /root/code/rllab && \
     conda env create -f /root/code/rllab/environment.yml && \
+    /opt/conda/envs/rllab3/bin/pip install --ignore-installed --upgrade https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.4.0-cp35-cp35m-linux_x86_64.whl && \
     conda clean -p && \
     apt-get autoclean && \
     apt-get autoremove && \
@@ -82,6 +83,8 @@ ENV PYTHONPATH /root/code/rllab:$PYTHONPATH
 ENV PATH /opt/conda/envs/rllab3/bin:$PATH
 RUN echo "source activate rllab3" >> /root/.bashrc
 ENV BASH_ENV /root/.bashrc
+# cpu theano so it wont fight with tf
+ENV THEANO_FLAGS mode=FAST_RUN,device=cpu,floatX=float32
 WORKDIR /root/code
 
 # Jupyter Notebook
