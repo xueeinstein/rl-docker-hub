@@ -61,20 +61,9 @@ ENV LANG C.UTF-8
 ENTRYPOINT [ "/usr/bin/tini", "--" ]
 
 # special deps
-RUN apt-get -y install git make cmake unzip
-RUN pip install awscli
-# ALE requires zlib
-RUN apt-get -y install zlib1g-dev
-# MUJOCO requires graphics stuff (Why?)
-RUN apt-get -y build-dep glfw
-RUN apt-get -y install libxrandr2 libxinerama-dev libxi6 libxcursor-dev
-# copied from requirements.txt
-#RUN pip install imageio tabulate nose
-RUN apt-get install -y vim ack-grep
-RUN pip install --upgrade pip
-# usual pip install pygame will fail
-RUN apt-get build-dep -y python-pygame
-RUN pip install Pillow
+RUN apt-get -y install git make cmake unzip zlib1g-dev libxrandr2 libxinerama-dev libxi6 libxcursor-dev
+RUN apt-get -y build-dep glfw python-pygame
+RUN pip install awscli Pillow
 
 # OpenAI gym
 RUN apt-get -y install libgtk2.0-0 ffmpeg libav-tools
@@ -83,7 +72,11 @@ CMD alias ffmpeg="avconv"
 
 # Add codebase stub
 RUN mkdir /root/code && git clone https://github.com/rll/rllab.git /root/code/rllab && \
-    conda env create -f /root/code/rllab/environment.yml
+    conda env create -f /root/code/rllab/environment.yml && \
+    conda clean -p && \
+    apt-get autoclean && \
+    apt-get autoremove && \
+    rm -r /var/lib/apt/lists/* /root/.cache/pip/
 
 ENV PYTHONPATH /root/code/rllab:$PYTHONPATH
 ENV PATH /opt/conda/envs/rllab3/bin:$PATH
