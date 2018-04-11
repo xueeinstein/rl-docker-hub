@@ -320,6 +320,9 @@ RUN cd ros_catkin_ws/src/kobuki_desktop/kobuki_qtestsuite && touch CATKIN_IGNORE
 RUN cd ros_catkin_ws/src && git clone https://github.com/ros/robot_state_publisher
 RUN cd ros_catkin_ws/src && git clone https://github.com/ros/kdl_parser
 
+# Fix LaserScan
+RUN cd ros_catkin_ws/src/common_msgs && git checkout 1.12.5
+
 # Compile the again the workspace
 # BACKUP
 # RUN cd ros_catkin_ws && ./src/catkin/bin/catkin_make_isolated -DPYTHON_VERSION=3.5 \
@@ -333,6 +336,12 @@ RUN mkdir gym-gazebo
 # COPY . /usr/local/gym/gym-gazebo
 # COPY . /root/gym-gazebo
 RUN git clone https://github.com/xueeinstein/gym-gazebo.git /root/gym-gazebo
+
+#--------------------
+# Others
+#--------------------
+RUN apt-get update && apt-get install -y python3-tk python3-defusedxml python3-skimage psmisc
+RUN pip3 install netifaces
 
 #--------------------
 # Install gym-gazebo
