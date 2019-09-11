@@ -1,0 +1,131 @@
+header: |
+    # Copyright 2019 Bill Xue <xueeinstein@gmail.com>
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    # ============================================================================
+    #
+    # THIS IS A GENERATED DOCKERFILE.
+    #
+    # This file was assembled from multiple pieces, whose use is documented
+    # throughout. Please refer to the github:xueeinstein/rl-docker-hub
+    # for more information.
+
+# A combinatorial explosion of Docker images and Dockerfiles.
+# Each "release" defines all of the ways to combine related but separate chunks
+# of functionality ("slices") by listing all of the "slice sets" to use when
+# building.
+#
+# For example, a release that uses {ubuntu}{py} would create 4 Dockerfiles
+# (which could become images or concrete Dockerfiles), because the "ubuntu"
+# and "py" slice sets both have two entries:
+#
+#   - cpu (no -py2 because the Python 2 slice set has add_to_name: ""
+#   - cpu-py3
+#   - gpu (similar)
+#   - gpu-py3
+#
+# Releases are all treated differently by TensorFlow's CI systems.
+releases:
+    gym:
+        tag_specs:
+            - "{ubuntu}{gym}{py}"
+
+    roboschool:
+        tag_specs:
+            - "{ubuntu}{roboschool}{py3}"
+
+    deepmindlab:
+        tag_specs:
+            - "{ubuntu}{deepmindlab}{py}"
+
+    football:
+        tag_specs:
+            - "{ubuntu}{football}{py3}"
+
+    # Dockerfiles stored in the repo; not pushed anywhere
+    dockerfiles:
+        is_dockerfiles: true
+        upload_images: false
+        tag_specs:
+            - "{ubuntu}{gym}{py}"
+            - "{ubuntu}{roboschool}{py3}"
+            - "{ubuntu}{deepmindlab}{py}"
+            - "{ubuntu}{football}{py3}"
+
+slice_sets:
+
+    py:
+        - add_to_name: ""
+          args:
+              - USE_PYTHON_3_NOT_2=
+        - add_to_name: "-py3"
+          args:
+              - USE_PYTHON_3_NOT_2=1
+
+    py3:
+        - add_to_name: "-py3"
+          args:
+              - USE_PYTHON_3_NOT_2=1
+
+    ubuntu:
+        - add_to_name: ""
+          dockerfile_exclusive_name: ""
+          args:
+              - UBUNTU_VERSION=18.04
+          partials:
+              - ubuntu/version
+              - ubuntu/cpu
+              - ubuntu/python
+              - ubuntu/mirror
+              - ubuntu/vnc
+        - add_to_name: "gpu-"
+          dockerfile_exclusive_name: "gpu-"
+          args:
+              - UBUNTU_VERSION=18.04
+              - CUDA=10.0
+          partials:
+              - ubuntu/version
+              - ubuntu/nvidia
+              - ubuntu/python
+              - ubuntu/mirror
+              - ubuntu/vnc
+
+    gym:
+        - add_to_name: "gym"
+          args:
+              - GYM_VERSION=0.14.0
+          partials:
+              - gym
+
+    roboschool:
+        - add_to_name: "roboschool"
+          args:
+              - GYM_VERSION=0.14.0
+              - ROBOSCHOOL_CHECK=HEAD
+          partials:
+              - gym
+              - roboschool
+
+    deepmindlab:
+        - add_to_name: "deepmindlab"
+          args:
+              - LAB_CHECK=638276c
+          partials:
+              - deepmindlab
+
+    football:
+        - add_to_name: "football"
+          args:
+              - FOOTBALL_VERSION=1.4
+          partials:
+              - football
